@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- Auth Section -->
+  <div id="auth-section" class="auth-section">
+    <div class="auth-container">
+      <h1 class="auth-title">Job Tracker</h1>
+      <p class="auth-subtitle">Track your job applications with ease</p>
+
+      <!-- Toggle Buttons -->
+      <div class="auth-toggle">
+        <button id="btn-show-login" class="toggle-btn active" onclick="showForm('login')">Login</button>
+        <button id="btn-show-register" class="toggle-btn" onclick="showForm('register')">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" required />
+        </div>
+        <p id="login-error" class="error-msg"></p>
+        <button type="submit" class="btn-primary">Login</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="auth-form hidden" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label for="register-name">Name</label>
+          <input type="text" id="register-name" placeholder="Your Name" required />
+        </div>
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <input type="password" id="register-password" placeholder="Min 6 characters" required />
+        </div>
+        <p id="register-error" class="error-msg"></p>
+        <button type="submit" class="btn-primary">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div id="dashboard-section" class="dashboard-section hidden">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <h2 class="app-brand">Job Tracker</h2>
+      <div class="top-actions">
+        <button id="btn-add-app" class="btn-primary" onclick="openModal()">+ Add Application</button>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+      </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-card">
+        <span class="stat-value" id="stat-total">0</span>
+        <span class="stat-label">Total</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-interviews">0</span>
+        <span class="stat-label">Interviews</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-offers">0</span>
+        <span class="stat-label">Offers</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-response">0%</span>
+        <span class="stat-label">Response Rate</span>
+      </div>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-board" id="kanban-board">
+      <div class="kanban-column" data-status="saved">
+        <div class="column-header">
+          <span class="column-title">Saved</span>
+          <span class="column-count" id="count-saved">0</span>
+        </div>
+        <div class="column-body" ondrop="handleDrop(event, 'saved')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+      </div>
+
+      <div class="kanban-column" data-status="applied">
+        <div class="column-header">
+          <span class="column-title">Applied</span>
+          <span class="column-count" id="count-applied">0</span>
+        </div>
+        <div class="column-body" ondrop="handleDrop(event, 'applied')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+      </div>
+
+      <div class="kanban-column" data-status="interview">
+        <div class="column-header">
+          <span class="column-title">Interview</span>
+          <span class="column-count" id="count-interview">0</span>
+        </div>
+        <div class="column-body" ondrop="handleDrop(event, 'interview')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+      </div>
+
+      <div class="kanban-column" data-status="offer">
+        <div class="column-header">
+          <span class="column-title">Offer</span>
+          <span class="column-count" id="count-offer">0</span>
+        </div>
+        <div class="column-body" ondrop="handleDrop(event, 'offer')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+      </div>
+
+      <div class="kanban-column" data-status="rejected">
+        <div class="column-header">
+          <span class="column-title">Rejected</span>
+          <span class="column-count" id="count-rejected">0</span>
+        </div>
+        <div class="column-body" ondrop="handleDrop(event, 'rejected')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Application Modal -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Add Application</h3>
+        <button class="btn-close-modal" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="add-app-form" onsubmit="handleAddApp(event)">
+        <div class="form-group">
+          <label for="app-company">Company *</label>
+          <input type="text" id="app-company" placeholder="e.g. Google" required />
+        </div>
+        <div class="form-group">
+          <label for="app-role">Role *</label>
+          <input type="text" id="app-role" placeholder="e.g. Frontend Engineer" required />
+        </div>
+        <div class="form-group">
+          <label for="app-url">Job URL</label>
+          <input type="url" id="app-url" placeholder="https://..." />
+        </div>
+        <div class="form-group">
+          <label for="app-date">Date Applied</label>
+          <input type="date" id="app-date" />
+        </div>
+        <div class="form-group">
+          <label for="app-notes">Notes</label>
+          <textarea id="app-notes" rows="3" placeholder="Any notes..."></textarea>
+        </div>
+        <p id="add-app-error" class="error-msg"></p>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
