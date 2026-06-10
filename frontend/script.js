@@ -7,6 +7,9 @@ let allApplications = [];
 let currentSearch = '';
 let currentStatusFilter = 'all';
 let currentSort = 'date-new';
+let currentView = 'board';
+let barChart = null;
+let pieChart = null;
 
 // ==================== Init ====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -56,6 +59,199 @@ function showDashboard() {
   document.getElementById('dashboard-section').classList.remove('hidden');
   loadStats();
   loadApplications();
+}
+
+function switchView(view) {
+  currentView = view;
+  const boardView = document.getElementById('board-view');
+  const dashboardView = document.getElementById('dashboard-view');
+  const navBoard = document.getElementById('nav-board');
+  const navDashboard = document.getElementById('nav-dashboard');
+
+  if (view === 'board') {
+    boardView.classList.remove('hidden');
+    dashboardView.classList.add('hidden');
+    navBoard.classList.add('active');
+    navDashboard.classList.remove('active');
+  } else {
+    boardView.classList.add('hidden');
+    dashboardView.classList.remove('hidden');
+    navBoard.classList.remove('active');
+    navDashboard.classList.add('active');
+    loadDashboard();
+  }
+}
+
+function loadDashboard() {
+  const container = document.getElementById('analytics-content');
+
+  if (allApplications.length === 0) {
+    container.innerHTML = `
+      <div class="analytics-empty">
+        <div class="empty-icon">📊</div>
+        <h3>No data yet</h3>
+        <p>Start adding applications to see your stats</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Compute stats
+  const total = allApplications.length;
+  const interviews = allApplications.filter(a => a.status === 'interview' || a.status === 'offer').length;
+  const offers = allApplications.filter(a => a.status === 'offer').length;
+  const appliedCount = allApplications.filter(a => a.status !== 'saved').length;
+  const responseRate = appliedCount > 0 ? Math.round((interviews / appliedCount) * 100) : 0;
+
+  // Status breakdown
+  const statusCounts = { saved: 0, applied: 0, interview: 0, offer: 0, rejected: 0 };
+  allApplications.forEach(a => { statusCounts[a.status] = (statusCounts[a.status] || 0) + 1; });
+
+  // Top 5 companies
+  const companyCounts = {};
+  allApplications.forEach(a => {
+    const c = a.company.trim();
+    companyCounts[c] = (companyCounts[c] || 0) + 1;
+  });
+  const topCompanies = Object.entries(companyCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  // Weekly data (last 8 weeks)
+  const weekCounts = [];
+  const now = new Date();
+  for (let i = 7; i >= 0; i--) {
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - (i * 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const label = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const count = allApplications.filter(app => {
+      if (!app.date_applied) return false;
+      const d = new Date(app.date_applied);
+      return d >= weekStart && d <= weekEnd;
+    }).length;
+    weekCounts.push({ label, count });
+  }
+
+  container.innerHTML = `
+    <div class="analytics-cards">
+      <div class="analytics-card">
+        <div class="analytics-card-value">${total}</div>
+        <div class="analytics-card-label">Total Applications</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-card-value">${interviews}</div>
+        <div class="analytics-card-label">Total Interviews</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-card-value">${offers}</div>
+        <div class="analytics-card-label">Total Offers</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-card-value">${responseRate}%</div>
+        <div class="analytics-card-label">Response Rate</div>
+      </div>
+    </div>
+
+    <div class="analytics-charts">
+      <div class="chart-card">
+        <h3 class="chart-title">Applications per Week (Last 8 Weeks)</h3>
+        <div class="chart-wrap"><canvas id="bar-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">Status Breakdown</h3>
+        <div class="chart-wrap"><canvas id="pie-chart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-card top-companies-card">
+      <h3 class="chart-title">Top 5 Companies</h3>
+      <table class="top-companies-table">
+        <thead>
+          <tr><th>#</th><th>Company</th><th>Applications</th></tr>
+        </thead>
+        <tbody>
+          ${topCompanies.map(([company, count], i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${escapeHtml(company)}</td>
+              <td><span class="count-badge">${count}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // Destroy old charts before creating new ones
+  if (barChart) { barChart.destroy(); barChart = null; }
+  if (pieChart) { pieChart.destroy(); pieChart = null; }
+
+  // Bar chart
+  barChart = new Chart(document.getElementById('bar-chart'), {
+    type: 'bar',
+    data: {
+      labels: weekCounts.map(w => w.label),
+      datasets: [{
+        label: 'Applications',
+        data: weekCounts.map(w => w.count),
+        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+        borderColor: '#6366f1',
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { color: '#8b92a8', stepSize: 1 }, grid: { color: '#333a55' } },
+        x: { ticks: { color: '#8b92a8', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Pie chart
+  const pieLabels = Object.keys(statusCounts).filter(k => statusCounts[k] > 0);
+  const pieData = pieLabels.map(k => statusCounts[k]);
+  const pieColors = {
+    saved: '#8b92a8',
+    applied: '#6366f1',
+    interview: '#f59e0b',
+    offer: '#22c55e',
+    rejected: '#ef4444',
+  };
+
+  pieChart = new Chart(document.getElementById('pie-chart'), {
+    type: 'pie',
+    data: {
+      labels: pieLabels.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+      datasets: [{
+        data: pieData,
+        backgroundColor: pieLabels.map(s => pieColors[s] || '#6366f1'),
+        borderWidth: 2,
+        borderColor: '#1a1d27',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b92a8', padding: 16, font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = Math.round((ctx.raw / total) * 100);
+              return ` ${ctx.label}: ${ctx.raw} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
 function getToken() {

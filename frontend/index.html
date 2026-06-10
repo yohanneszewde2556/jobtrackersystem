@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -58,9 +59,13 @@
 
   <!-- Dashboard Section -->
   <div id="dashboard-section" class="dashboard-section hidden">
-    <!-- Top Bar -->
+    <!-- Top Bar with Nav -->
     <header class="top-bar">
       <h2 class="app-brand">Job Tracker</h2>
+      <nav class="app-nav">
+        <button class="nav-link active" id="nav-board" onclick="switchView('board')">Board</button>
+        <button class="nav-link" id="nav-dashboard" onclick="switchView('dashboard')">Dashboard</button>
+      </nav>
       <div class="top-actions">
         <button id="btn-add-app" class="btn-primary" onclick="openModal()">+ Add Application</button>
         <button class="btn-logout" onclick="handleLogout()">Logout</button>
@@ -87,75 +92,85 @@
       </div>
     </div>
 
-    <!-- Filter Bar -->
-    <div class="filter-bar" id="filter-bar">
-      <div class="filter-search-wrap">
-        <span class="filter-icon">&#x1F50D;</span>
-        <input
-          type="text"
-          id="search-input"
-          placeholder="Search company or role..."
-          oninput="handleSearchInput()"
-        />
+    <!-- Board View -->
+    <div id="board-view">
+      <!-- Filter Bar -->
+      <div class="filter-bar" id="filter-bar">
+        <div class="filter-search-wrap">
+          <span class="filter-icon">&#x1F50D;</span>
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search company or role..."
+            oninput="handleSearchInput()"
+          />
+        </div>
+        <select id="status-filter" class="filter-select" onchange="handleStatusFilter()">
+          <option value="all">All Statuses</option>
+          <option value="saved">Saved</option>
+          <option value="applied">Applied</option>
+          <option value="interview">Interview</option>
+          <option value="offer">Offer</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <select id="sort-select" class="filter-select" onchange="handleSort()">
+          <option value="date-new">Date Applied (Newest)</option>
+          <option value="date-old">Date Applied (Oldest)</option>
+          <option value="company-az">Company (A-Z)</option>
+        </select>
+        <button id="btn-clear-filters" class="btn-clear hidden" onclick="clearFilters()">
+          &#x2715; Clear Filters
+        </button>
       </div>
-      <select id="status-filter" class="filter-select" onchange="handleStatusFilter()">
-        <option value="all">All Statuses</option>
-        <option value="saved">Saved</option>
-        <option value="applied">Applied</option>
-        <option value="interview">Interview</option>
-        <option value="offer">Offer</option>
-        <option value="rejected">Rejected</option>
-      </select>
-      <select id="sort-select" class="filter-select" onchange="handleSort()">
-        <option value="date-new">Date Applied (Newest)</option>
-        <option value="date-old">Date Applied (Oldest)</option>
-        <option value="company-az">Company (A-Z)</option>
-      </select>
-      <button id="btn-clear-filters" class="btn-clear hidden" onclick="clearFilters()">
-        &#x2715; Clear Filters
-      </button>
+
+      <!-- Kanban Board -->
+      <div class="kanban-board" id="kanban-board">
+        <div class="kanban-column" data-status="saved">
+          <div class="column-header">
+            <span class="column-title">Saved</span>
+            <span class="column-count" id="count-saved">0</span>
+          </div>
+          <div class="column-body" ondrop="handleDrop(event, 'saved')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+        </div>
+
+        <div class="kanban-column" data-status="applied">
+          <div class="column-header">
+            <span class="column-title">Applied</span>
+            <span class="column-count" id="count-applied">0</span>
+          </div>
+          <div class="column-body" ondrop="handleDrop(event, 'applied')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+        </div>
+
+        <div class="kanban-column" data-status="interview">
+          <div class="column-header">
+            <span class="column-title">Interview</span>
+            <span class="column-count" id="count-interview">0</span>
+          </div>
+          <div class="column-body" ondrop="handleDrop(event, 'interview')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+        </div>
+
+        <div class="kanban-column" data-status="offer">
+          <div class="column-header">
+            <span class="column-title">Offer</span>
+            <span class="column-count" id="count-offer">0</span>
+          </div>
+          <div class="column-body" ondrop="handleDrop(event, 'offer')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+        </div>
+
+        <div class="kanban-column" data-status="rejected">
+          <div class="column-header">
+            <span class="column-title">Rejected</span>
+            <span class="column-count" id="count-rejected">0</span>
+          </div>
+          <div class="column-body" ondrop="handleDrop(event, 'rejected')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- Kanban Board -->
-    <div class="kanban-board" id="kanban-board">
-      <div class="kanban-column" data-status="saved">
-        <div class="column-header">
-          <span class="column-title">Saved</span>
-          <span class="column-count" id="count-saved">0</span>
-        </div>
-        <div class="column-body" ondrop="handleDrop(event, 'saved')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
-      </div>
-
-      <div class="kanban-column" data-status="applied">
-        <div class="column-header">
-          <span class="column-title">Applied</span>
-          <span class="column-count" id="count-applied">0</span>
-        </div>
-        <div class="column-body" ondrop="handleDrop(event, 'applied')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
-      </div>
-
-      <div class="kanban-column" data-status="interview">
-        <div class="column-header">
-          <span class="column-title">Interview</span>
-          <span class="column-count" id="count-interview">0</span>
-        </div>
-        <div class="column-body" ondrop="handleDrop(event, 'interview')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
-      </div>
-
-      <div class="kanban-column" data-status="offer">
-        <div class="column-header">
-          <span class="column-title">Offer</span>
-          <span class="column-count" id="count-offer">0</span>
-        </div>
-        <div class="column-body" ondrop="handleDrop(event, 'offer')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
-      </div>
-
-      <div class="kanban-column" data-status="rejected">
-        <div class="column-header">
-          <span class="column-title">Rejected</span>
-          <span class="column-count" id="count-rejected">0</span>
-        </div>
-        <div class="column-body" ondrop="handleDrop(event, 'rejected')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+    <!-- Dashboard View -->
+    <div id="dashboard-view" class="hidden">
+      <div class="analytics-container" id="analytics-content">
+        <!-- Filled by JS -->
       </div>
     </div>
   </div>
