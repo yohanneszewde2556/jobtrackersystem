@@ -3,6 +3,10 @@ const TOKEN_KEY = 'job_tracker_token';
 
 // ==================== State ====================
 let currentUser = null;
+let allApplications = [];
+let currentSearch = '';
+let currentStatusFilter = 'all';
+let currentSort = 'date-new';
 
 // ==================== Init ====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -167,40 +171,114 @@ async function loadApplications() {
 
     if (!data.success) return;
 
-    // Clear all columns
-    const columns = document.querySelectorAll('.column-body');
-    columns.forEach(col => {
-      col.innerHTML = '';
-    });
-
-    const counts = { saved: 0, applied: 0, interview: 0, offer: 0, rejected: 0 };
-
-    for (const app of data.data) {
-      const col = document.querySelector(`.column-body[data-status="${app.status}"]`) ||
-                  document.querySelector(`[data-status="${app.status}"] .column-body`);
-      if (!col) continue;
-
-      col.appendChild(createCard(app));
-      counts[app.status] = (counts[app.status] || 0) + 1;
-    }
-
-    // Add empty state
-    columns.forEach(col => {
-      if (col.children.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'column-empty';
-        empty.textContent = 'No applications';
-        col.appendChild(empty);
-      }
-    });
-
-    // Update counts
-    for (const [status, count] of Object.entries(counts)) {
-      const el = document.getElementById(`count-${status}`);
-      if (el) el.textContent = count;
-    }
+    allApplications = data.data;
+    applyFilters();
   } catch (err) {
     console.error('Failed to load applications:', err);
+  }
+}
+
+function applyFilters() {
+  let filtered = [...allApplications];
+
+  // Apply search
+  if (currentSearch) {
+    const q = currentSearch.toLowerCase();
+    filtered = filtered.filter(app =>
+      app.company.toLowerCase().includes(q) ||
+      app.role.toLowerCase().includes(q)
+    );
+  }
+
+  // Apply status filter
+  if (currentStatusFilter !== 'all') {
+    filtered = filtered.filter(app => app.status === currentStatusFilter);
+  }
+
+  // Apply sort
+  filtered.sort((a, b) => {
+    switch (currentSort) {
+      case 'date-new':
+        return new Date(b.date_applied || 0) - new Date(a.date_applied || 0);
+      case 'date-old':
+        return new Date(a.date_applied || 0) - new Date(b.date_applied || 0);
+      case 'company-az':
+        return a.company.localeCompare(b.company);
+      default:
+        return 0;
+    }
+  });
+
+  renderBoard(filtered);
+  updateClearButton();
+}
+
+function renderBoard(apps) {
+  // Clear all columns
+  const columns = document.querySelectorAll('.column-body');
+  columns.forEach(col => {
+    col.innerHTML = '';
+  });
+
+  const counts = { saved: 0, applied: 0, interview: 0, offer: 0, rejected: 0 };
+
+  for (const app of apps) {
+    const col = document.querySelector(`.kanban-column[data-status="${app.status}"] .column-body`);
+    if (!col) continue;
+
+    col.appendChild(createCard(app));
+    counts[app.status] = (counts[app.status] || 0) + 1;
+  }
+
+  // Add empty state to each column
+  columns.forEach(col => {
+    if (col.children.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'column-empty';
+      empty.textContent = 'No applications';
+      col.appendChild(empty);
+    }
+  });
+
+  // Update counts
+  for (const [status, count] of Object.entries(counts)) {
+    const el = document.getElementById(`count-${status}`);
+    if (el) el.textContent = count;
+  }
+}
+
+function handleSearchInput() {
+  currentSearch = document.getElementById('search-input').value.trim();
+  applyFilters();
+}
+
+function handleStatusFilter() {
+  currentStatusFilter = document.getElementById('status-filter').value;
+  applyFilters();
+}
+
+function handleSort() {
+  currentSort = document.getElementById('sort-select').value;
+  applyFilters();
+}
+
+function clearFilters() {
+  currentSearch = '';
+  currentStatusFilter = 'all';
+  currentSort = 'date-new';
+  document.getElementById('search-input').value = '';
+  document.getElementById('status-filter').value = 'all';
+  document.getElementById('sort-select').value = 'date-new';
+  applyFilters();
+}
+
+function updateClearButton() {
+  const btn = document.getElementById('btn-clear-filters');
+  const hasFilters = currentSearch || currentStatusFilter !== 'all' || currentSort !== 'date-new';
+  if (hasFilters) {
+    btn.classList.remove('hidden');
+  } else {
+    btn.classList.add('hidden');
   }
 }
 
@@ -372,6 +450,10 @@ async function handleDrop(e, newStatus) {
       showToast(data.message || 'Failed to update status', 'error');
       return;
     }
+
+    // Update the local array so filters stay correct
+    const app = allApplications.find(a => a.id === draggedCardId);
+    if (app) app.status = newStatus;
 
     loadStats();
     showToast(`Moved to ${capitalize(newStatus)}`, 'success');

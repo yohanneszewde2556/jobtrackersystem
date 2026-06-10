@@ -87,6 +87,35 @@
       </div>
     </div>
 
+    <!-- Filter Bar -->
+    <div class="filter-bar" id="filter-bar">
+      <div class="filter-search-wrap">
+        <span class="filter-icon">&#x1F50D;</span>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search company or role..."
+          oninput="handleSearchInput()"
+        />
+      </div>
+      <select id="status-filter" class="filter-select" onchange="handleStatusFilter()">
+        <option value="all">All Statuses</option>
+        <option value="saved">Saved</option>
+        <option value="applied">Applied</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <select id="sort-select" class="filter-select" onchange="handleSort()">
+        <option value="date-new">Date Applied (Newest)</option>
+        <option value="date-old">Date Applied (Oldest)</option>
+        <option value="company-az">Company (A-Z)</option>
+      </select>
+      <button id="btn-clear-filters" class="btn-clear hidden" onclick="clearFilters()">
+        &#x2715; Clear Filters
+      </button>
+    </div>
+
     <!-- Kanban Board -->
     <div class="kanban-board" id="kanban-board">
       <div class="kanban-column" data-status="saved">
